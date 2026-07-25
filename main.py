@@ -20,7 +20,7 @@ from utils.vision import Vision
 from utils.actions import Actions
 from utils.webhook import DiscordWebhook
 
-CURRENT_VERSION = "1.09"
+CURRENT_VERSION = "1.10"
 # Public GitHub Repository Raw Version URL
 UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/version.json"
 
@@ -406,20 +406,26 @@ class CorpsuleApp(ctk.CTk):
             try:
                 app_dir = get_app_dir()
                 if getattr(sys, 'frozen', False):
-                    # Executable update handler with Windows Explorer Shell launch!
+                    # Executable update handler with process PID lock-release batch script!
                     target_exe = sys.executable
                     new_exe = target_exe + ".new"
                     
-                    urllib.request.urlretrieve(target_url, new_exe)
+                    req = urllib.request.Request(target_url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req, timeout=60) as resp, open(new_exe, 'wb') as out_f:
+                        out_f.write(resp.read())
 
+                    current_pid = os.getpid()
                     bat_path = os.path.join(app_dir, "update.bat")
                     with open(bat_path, "w") as f:
                         f.write(
                             '@echo off\n'
-                            'timeout /t 3 /nobreak > nul\n'
-                            f'move /y "{new_exe}" "{target_exe}"\n'
+                            ':retry\n'
+                            f'taskkill /f /pid {current_pid} >nul 2>&1\n'
                             'timeout /t 1 /nobreak > nul\n'
-                            f'explorer.exe "{target_exe}"\n' # Launches fresh app window from Windows Explorer!
+                            f'move /y "{new_exe}" "{target_exe}" >nul 2>&1\n'
+                            f'if exist "{new_exe}" goto retry\n'
+                            'timeout /t 1 /nobreak > nul\n'
+                            f'explorer.exe "{target_exe}"\n'
                             'del "%~f0"\n'
                         )
 
@@ -429,7 +435,9 @@ class CorpsuleApp(ctk.CTk):
                     # Python script update handler
                     target_py = os.path.abspath(__file__)
                     new_py = target_py + ".new"
-                    urllib.request.urlretrieve(target_url, new_py)
+                    req = urllib.request.Request(target_url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req, timeout=60) as resp, open(new_py, 'wb') as out_f:
+                        out_f.write(resp.read())
 
                     os.replace(new_py, target_py)
                     print("[UPDATER] ✅ Macro updated successfully! Relaunching...")
