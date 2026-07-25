@@ -1,5 +1,5 @@
 {
-    "version": "1.00",
+    "version": "1.01",
     "download_url": "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/main.py",
-    "changelog": "- Initial Release v1.00\n- Lag-proof camera alignment\n- Discord webhook results screen"
+    "changelog": "- Added KeyAuth license verification\n- Camera alignment optimizations"
 }
