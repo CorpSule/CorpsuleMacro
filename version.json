@@ -1,5 +1,5 @@
 {
-    "version": "1.01",
+    "version": "1.02",
     "download_url": "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/main.py",
     "changelog": "- Added KeyAuth license verification\n- Camera alignment optimizations"
 }
