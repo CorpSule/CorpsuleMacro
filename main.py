@@ -28,7 +28,7 @@ UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/mai
 # =========================================================================
 # KEYAUTH CONFIGURATION (Fill in your KeyAuth Application details here!)
 # =========================================================================
-KEYAUTH_NAME = "Orb747z's Application"      # Your KeyAuth Application Name
+KEYAUTH_NAME = "CorpsuleMacro"      # Your KeyAuth Application Name
 KEYAUTH_OWNER_ID = "eJpgeCWCZn"  # Your KeyAuth Owner ID
 KEYAUTH_SECRET = "50afa791346022a1424870eba744aa176c50cff2b3f85a06e5e951efe445bcb2"      # Your KeyAuth Secret
 KEYAUTH_VERSION = "1.0"
