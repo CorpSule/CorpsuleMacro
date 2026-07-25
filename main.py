@@ -406,7 +406,7 @@ class CorpsuleApp(ctk.CTk):
             try:
                 app_dir = get_app_dir()
                 if getattr(sys, 'frozen', False):
-                    # Executable update handler
+                    # Executable update handler with Windows Explorer Shell launch!
                     target_exe = sys.executable
                     new_exe = target_exe + ".new"
                     
@@ -416,9 +416,10 @@ class CorpsuleApp(ctk.CTk):
                     with open(bat_path, "w") as f:
                         f.write(
                             '@echo off\n'
-                            'timeout /t 4 /nobreak > nul\n'  # 4s delay guarantees PyInstaller DLL temp locks release completely!
+                            'timeout /t 3 /nobreak > nul\n'
                             f'move /y "{new_exe}" "{target_exe}"\n'
-                            f'start "" "{target_exe}"\n'
+                            'timeout /t 1 /nobreak > nul\n'
+                            f'explorer.exe "{target_exe}"\n' # Launches fresh app window from Windows Explorer!
                             'del "%~f0"\n'
                         )
 
