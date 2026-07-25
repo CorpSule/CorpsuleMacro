@@ -12,7 +12,6 @@ import webbrowser
 import stat
 import urllib.request
 import urllib.parse
-import hashlib
 import subprocess
 from tkinter import filedialog
 from PIL import Image
@@ -26,10 +25,10 @@ CURRENT_VERSION = "1.03"
 UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/version.json"
 
 # =========================================================================
-# KEYAUTH CONFIGURATION (Fill in your KeyAuth Application details here!)
+# KEYAUTH CONFIGURATION
 # =========================================================================
 KEYAUTH_NAME = "CorpsuleMacro"
-KEYAUTH_OWNER_ID = "eJpgeCW CZn"
+KEYAUTH_OWNER_ID = "eJpgeCW CZn"  # Auto-cleans accidental spaces!
 KEYAUTH_SECRET = "50afa791346022a1424870eba176c50cff2b3f85a06e5e951efe445bcb2"
 KEYAUTH_VERSION = "1.0"
 
@@ -100,67 +99,68 @@ THEMES = {
 }
 
 # =========================================================================
-# KEYAUTH HANDSHAKE WRAPPER (FULL SESSION ID INITIALIZATION)
+# SECURE KEYAUTH POST CLIENT
 # =========================================================================
 class KeyAuthWrapper:
     session_id = None
 
     @staticmethod
+    def post_request(params):
+        url = "https://keyauth.win/api/1.2/"
+        data = urllib.parse.urlencode(params).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'User-Agent': 'KeyAuth'})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode('utf-8'))
+
+    @staticmethod
     def init_session():
-        """Requests active sessionid from KeyAuth API."""
         try:
-            url = f"https://keyauth.win/api/1.2/?type=init&name={urllib.parse.quote(KEYAUTH_NAME.strip())}&ownerid={KEYAUTH_OWNER_ID.strip()}&secret={KEYAUTH_SECRET.strip()}&version={KEYAUTH_VERSION}"
-            req = urllib.request.Request(url, headers={'User-Agent': 'KeyAuth'})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                if data.get("success", False):
-                    KeyAuthWrapper.session_id = data.get("sessionid", "")
-                    return True, "Initialized"
-                else:
-                    return False, data.get("message", "KeyAuth Init Failed!")
+            params = {
+                "type": "init",
+                "name": KEYAUTH_NAME.strip(),
+                "ownerid": KEYAUTH_OWNER_ID.strip().replace(" ", ""),
+                "secret": KEYAUTH_SECRET.strip(),
+                "version": KEYAUTH_VERSION
+            }
+            data = KeyAuthWrapper.post_request(params)
+            if data.get("success", False):
+                KeyAuthWrapper.session_id = data.get("sessionid", "")
+                return True, "Initialized"
+            else:
+                return False, data.get("message", "KeyAuth Init Failed!")
         except Exception as e:
-            return False, f"Connection Error: {e}"
+            return False, f"Server Connection Error: {e}"
 
     @staticmethod
     def verify_key(key):
-        """Validates license key using active KeyAuth sessionid."""
         if not key or len(key.strip()) < 4:
             return False, "Please enter a valid key!"
 
         if KEYAUTH_OWNER_ID == "YOUR_OWNER_ID":
-            return True, "Demo Mode Active (Fill in KeyAuth credentials in main.py)"
+            return True, "Demo Mode Active"
 
-        # Step 1: Initialize Session ID
+        # Step 1: Initialize Session
         if not KeyAuthWrapper.session_id:
             init_ok, init_msg = KeyAuthWrapper.init_session()
             if not init_ok:
                 return False, init_msg
 
-        # Step 2: Validate License Key using sessionid
+        # Step 2: Validate License Key
         try:
-            url = f"https://keyauth.win/api/1.2/?type=license&key={key.strip()}&sessionid={KeyAuthWrapper.session_id}&name={urllib.parse.quote(KEYAUTH_NAME.strip())}&ownerid={KEYAUTH_OWNER_ID.strip()}"
-            req = urllib.request.Request(url, headers={'User-Agent': 'KeyAuth'})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                if data.get("success", False):
-                    return True, "License Validated!"
-                else:
-                    # Retry with fresh session if session expired
-                    if "Session" in data.get("message", ""):
-                        KeyAuthWrapper.session_id = None
-                        init_ok, _ = KeyAuthWrapper.init_session()
-                        if init_ok:
-                            url_r = f"https://keyauth.win/api/1.2/?type=license&key={key.strip()}&sessionid={KeyAuthWrapper.session_id}&name={urllib.parse.quote(KEYAUTH_NAME.strip())}&ownerid={KEYAUTH_OWNER_ID.strip()}"
-                            req_r = urllib.request.Request(url_r, headers={'User-Agent': 'KeyAuth'})
-                            with urllib.request.urlopen(req_r, timeout=8) as resp_r:
-                                data_r = json.loads(resp_r.read().decode('utf-8'))
-                                if data_r.get("success", False):
-                                    return True, "License Validated!"
-                                return False, data_r.get("message", "Invalid Key!")
-
-                    return False, data.get("message", "Invalid or Expired Key!")
+            params = {
+                "type": "license",
+                "key": key.strip(),
+                "sessionid": KeyAuthWrapper.session_id,
+                "name": KEYAUTH_NAME.strip(),
+                "ownerid": KEYAUTH_OWNER_ID.strip().replace(" ", "")
+            }
+            data = KeyAuthWrapper.post_request(params)
+            if data.get("success", False):
+                return True, "License Validated!"
+            else:
+                return False, data.get("message", "Invalid or Expired Key!")
         except Exception as e:
-            return False, f"KeyAuth Server Error: {e}"
+            return False, f"Verification Error: {e}"
 
 
 class KeyAuthLoginWindow(ctk.CTk):
@@ -169,7 +169,7 @@ class KeyAuthLoginWindow(ctk.CTk):
         self.on_success_callback = on_success_callback
 
         self.title("🔐 Corpsule Macro — License Verification")
-        self.geometry("380x260")
+        self.geometry("380x270")
         self.resizable(False, False)
         self.configure(fg_color="#03140D")
 
@@ -182,21 +182,21 @@ class KeyAuthLoginWindow(ctk.CTk):
         card = ctk.CTkFrame(self, fg_color="#0A261B", border_color="#065F46", border_width=2)
         card.pack(padx=15, pady=15, fill="both", expand=True)
 
-        ctk.CTkLabel(card, text="🔑 License Key Required", font=ctk.CTkFont(size=16, weight="bold"), text_color="#A7F3D0").pack(pady=(15, 5))
-        ctk.CTkLabel(card, text="Please enter your KeyAuth license key to continue:", font=ctk.CTkFont(size=11), text_color="gray").pack(pady=(0, 10))
+        ctk.CTkLabel(card, text="🔑 License Key Required", font=ctk.CTkFont(size=16, weight="bold"), text_color="#A7F3D0").pack(pady=(12, 3))
+        ctk.CTkLabel(card, text="Please enter your KeyAuth license key to continue:", font=ctk.CTkFont(size=11), text_color="gray").pack(pady=(0, 8))
 
         self.key_entry = ctk.CTkEntry(card, width=280, placeholder_text="XXXXX-XXXXX-XXXXX-XXXXX", show="*")
-        self.key_entry.pack(pady=5)
+        self.key_entry.pack(pady=4)
 
         saved_key = self.load_saved_key()
         if saved_key:
             self.key_entry.insert(0, saved_key)
 
-        self.lbl_status = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color="#EF4444")
-        self.lbl_status.pack(pady=2)
+        self.lbl_status = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=10, weight="bold"), text_color="#EF4444", wraplength=320)
+        self.lbl_status.pack(pady=4)
 
         btn_login = ctk.CTkButton(card, text="🔓 Authenticate Key", fg_color="#10B981", hover_color="#059669", font=ctk.CTkFont(weight="bold"), width=200, command=self.attempt_login)
-        btn_login.pack(pady=10)
+        btn_login.pack(pady=8)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -225,7 +225,7 @@ class KeyAuthLoginWindow(ctk.CTk):
 
     def attempt_login(self):
         entered_key = self.key_entry.get().strip()
-        self.lbl_status.configure(text="⏳ Verifying Key...", text_color="#3B82F6")
+        self.lbl_status.configure(text="⏳ Verifying Key with KeyAuth...", text_color="#3B82F6")
         self.update_idletasks()
 
         def _async_auth():
