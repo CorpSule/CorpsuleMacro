@@ -28,9 +28,9 @@ UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/mai
 # =========================================================================
 # KEYAUTH CONFIGURATION (Fill in your KeyAuth Application details here!)
 # =========================================================================
-KEYAUTH_NAME = "CorpsuleMacro"      # Your KeyAuth Application Name
-KEYAUTH_OWNER_ID = "eJpgeCWCZn"  # Your KeyAuth Owner ID
-KEYAUTH_SECRET = "50afa791346022a1424870eba744aa176c50cff2b3f85a06e5e951efe445bcb2"      # Your KeyAuth Secret
+KEYAUTH_NAME = "Orb747z's Application"
+KEYAUTH_OWNER_ID = "eJpgeCW CZn"
+KEYAUTH_SECRET = "50afa791346022a1424870eba176c50cff2b3f85a06e5e951efe445bcb2"
 KEYAUTH_VERSION = "1.0"
 
 ctk.set_appearance_mode("Dark")
@@ -100,25 +100,64 @@ THEMES = {
 }
 
 # =========================================================================
-# KEYAUTH AUTHENTICATION WRAPPER
+# KEYAUTH HANDSHAKE WRAPPER (FULL SESSION ID INITIALIZATION)
 # =========================================================================
 class KeyAuthWrapper:
+    session_id = None
+
+    @staticmethod
+    def init_session():
+        """Requests active sessionid from KeyAuth API."""
+        try:
+            url = f"https://keyauth.win/api/1.2/?type=init&name={urllib.parse.quote(KEYAUTH_NAME.strip())}&ownerid={KEYAUTH_OWNER_ID.strip()}&secret={KEYAUTH_SECRET.strip()}&version={KEYAUTH_VERSION}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'KeyAuth'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if data.get("success", False):
+                    KeyAuthWrapper.session_id = data.get("sessionid", "")
+                    return True, "Initialized"
+                else:
+                    return False, data.get("message", "KeyAuth Init Failed!")
+        except Exception as e:
+            return False, f"Connection Error: {e}"
+
     @staticmethod
     def verify_key(key):
+        """Validates license key using active KeyAuth sessionid."""
         if not key or len(key.strip()) < 4:
             return False, "Please enter a valid key!"
 
         if KEYAUTH_OWNER_ID == "YOUR_OWNER_ID":
             return True, "Demo Mode Active (Fill in KeyAuth credentials in main.py)"
 
+        # Step 1: Initialize Session ID
+        if not KeyAuthWrapper.session_id:
+            init_ok, init_msg = KeyAuthWrapper.init_session()
+            if not init_ok:
+                return False, init_msg
+
+        # Step 2: Validate License Key using sessionid
         try:
-            url = f"https://keyauth.win/api/1.2/?type=license&key={key.strip()}&name={urllib.parse.quote(KEYAUTH_NAME)}&ownerid={KEYAUTH_OWNER_ID}&secret={KEYAUTH_SECRET}"
+            url = f"https://keyauth.win/api/1.2/?type=license&key={key.strip()}&sessionid={KeyAuthWrapper.session_id}&name={urllib.parse.quote(KEYAUTH_NAME.strip())}&ownerid={KEYAUTH_OWNER_ID.strip()}"
             req = urllib.request.Request(url, headers={'User-Agent': 'KeyAuth'})
             with urllib.request.urlopen(req, timeout=8) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
                 if data.get("success", False):
                     return True, "License Validated!"
                 else:
+                    # Retry with fresh session if session expired
+                    if "Session" in data.get("message", ""):
+                        KeyAuthWrapper.session_id = None
+                        init_ok, _ = KeyAuthWrapper.init_session()
+                        if init_ok:
+                            url_r = f"https://keyauth.win/api/1.2/?type=license&key={key.strip()}&sessionid={KeyAuthWrapper.session_id}&name={urllib.parse.quote(KEYAUTH_NAME.strip())}&ownerid={KEYAUTH_OWNER_ID.strip()}"
+                            req_r = urllib.request.Request(url_r, headers={'User-Agent': 'KeyAuth'})
+                            with urllib.request.urlopen(req_r, timeout=8) as resp_r:
+                                data_r = json.loads(resp_r.read().decode('utf-8'))
+                                if data_r.get("success", False):
+                                    return True, "License Validated!"
+                                return False, data_r.get("message", "Invalid Key!")
+
                     return False, data.get("message", "Invalid or Expired Key!")
         except Exception as e:
             return False, f"KeyAuth Server Error: {e}"
@@ -189,13 +228,19 @@ class KeyAuthLoginWindow(ctk.CTk):
         self.lbl_status.configure(text="⏳ Verifying Key...", text_color="#3B82F6")
         self.update_idletasks()
 
-        success, msg = KeyAuthWrapper.verify_key(entered_key)
-        if success:
-            self.save_license_key(entered_key)
-            self.destroy()
-            self.on_success_callback()
-        else:
-            self.lbl_status.configure(text=f"❌ {msg}", text_color="#EF4444")
+        def _async_auth():
+            success, msg = KeyAuthWrapper.verify_key(entered_key)
+            if success:
+                self.save_license_key(entered_key)
+                self.after(0, self.finish_login)
+            else:
+                self.after(0, lambda: self.lbl_status.configure(text=f"❌ {msg}", text_color="#EF4444"))
+
+        threading.Thread(target=_async_auth, daemon=True).start()
+
+    def finish_login(self):
+        self.destroy()
+        self.on_success_callback()
 
     def on_close(self):
         sys.exit(0)
@@ -465,7 +510,7 @@ class CorpsuleApp(ctk.CTk):
 
         btn_discord = ctk.CTkButton(
             btn_bar, text="💬 Discord", fg_color="#5865F2", hover_color="#4752C4",
-            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg/yffXf6rNcc")
+            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg")
         )
         btn_discord.pack(side="right", padx=2)
 
@@ -541,7 +586,6 @@ class CorpsuleApp(ctk.CTk):
         threading.Thread(target=_async_download, daemon=True).start()
 
     def quit_app(self):
-        """Clean main-thread shutdown to instantly close old instance!"""
         try:
             keyboard.unhook_all_hotkeys()
         except Exception:
