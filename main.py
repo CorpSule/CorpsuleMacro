@@ -471,15 +471,21 @@ class CorpsuleApp(ctk.CTk):
 
         btn_discord = ctk.CTkButton(
             btn_bar, text="💬 Discord", fg_color="#5865F2", hover_color="#4752C4",
-            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg")
+            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg/yffXf6rNcc")
         )
         btn_discord.pack(side="right", padx=2)
 
     def check_for_updates(self):
+        """Asynchronously checks for new updates online with GitHub cache-bypassing!"""
         def _async_update_check():
             print(f"\n[UPDATER] 🔍 Checking for updates... (Current Version: v{CURRENT_VERSION})")
             try:
-                req = urllib.request.Request(UPDATE_CHECK_URL, headers={'User-Agent': 'Mozilla/5.0'})
+                # Appends timestamp to force GitHub to bypass raw CDN cache instantly!
+                cache_bypass_url = f"{UPDATE_CHECK_URL}?t={int(time.time())}"
+                req = urllib.request.Request(
+                    cache_bypass_url, 
+                    headers={'User-Agent': 'Mozilla/5.0', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
+                )
                 with urllib.request.urlopen(req, timeout=5) as resp:
                     data = json.loads(resp.read().decode('utf-8'))
                     latest_v = data.get("version", CURRENT_VERSION)
@@ -492,7 +498,7 @@ class CorpsuleApp(ctk.CTk):
                     else:
                         print(f"[UPDATER] ✅ You are using the latest version (v{CURRENT_VERSION})!")
             except Exception as e:
-                print(f"[UPDATER] ℹ️ Update server check completed. (v{CURRENT_VERSION} active)")
+                print(f"[UPDATER ERROR] Could not reach update server: {e}")
 
         threading.Thread(target=_async_update_check, daemon=True).start()
 
