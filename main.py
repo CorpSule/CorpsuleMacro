@@ -371,11 +371,12 @@ class CorpsuleApp(ctk.CTk):
                     data = json.loads(resp.read().decode('utf-8'))
                     latest_v = data.get("version", CURRENT_VERSION)
                     dl_url = data.get("download_url", "")
+                    exe_url = data.get("exe_url", dl_url)
                     changelog = data.get("changelog", "Performance fixes and improvements.")
 
                     if latest_v != CURRENT_VERSION:
                         print(f"[UPDATER] 🎉 NEW UPDATE AVAILABLE: v{latest_v}!")
-                        self.after(0, lambda: self.prompt_update_dialog(latest_v, dl_url, changelog))
+                        self.after(0, lambda: self.prompt_update_dialog(latest_v, dl_url, exe_url, changelog))
                     else:
                         print(f"[UPDATER] ✅ You are using the latest version (v{CURRENT_VERSION})!")
             except Exception as e:
@@ -383,7 +384,7 @@ class CorpsuleApp(ctk.CTk):
 
         threading.Thread(target=_async_update_check, daemon=True).start()
 
-    def prompt_update_dialog(self, latest_v, dl_url, changelog):
+    def prompt_update_dialog(self, latest_v, dl_url, exe_url, changelog):
         win = ctk.CTkToplevel(self)
         win.title("Update Available!")
         win.geometry("380x280")
@@ -394,19 +395,21 @@ class CorpsuleApp(ctk.CTk):
 
         def start_update():
             win.destroy()
-            print(f"[UPDATER] 🚀 Downloading update v{latest_v} from {dl_url}...")
-            self.perform_auto_update(dl_url)
+            target_url = exe_url if getattr(sys, 'frozen', False) else dl_url
+            print(f"[UPDATER] 🚀 Downloading update v{latest_v} from {target_url}...")
+            self.perform_auto_update(target_url)
 
         ctk.CTkButton(win, text="🚀 Update Now", fg_color="#10B981", hover_color="#059669", command=start_update).pack(pady=15)
 
-    def perform_auto_update(self, dl_url):
+    def perform_auto_update(self, target_url):
         def _async_download():
             try:
                 app_dir = get_app_dir()
                 if getattr(sys, 'frozen', False):
+                    # Executable update handler
                     target_exe = sys.executable
                     new_exe = target_exe + ".new"
-                    urllib.request.urlretrieve(dl_url, new_exe)
+                    urllib.request.urlretrieve(target_url, new_exe)
 
                     bat_path = os.path.join(app_dir, "update.bat")
                     with open(bat_path, "w") as f:
@@ -415,9 +418,10 @@ class CorpsuleApp(ctk.CTk):
                     subprocess.Popen([bat_path], shell=True)
                     self.after(0, self.quit_app)
                 else:
+                    # Python script update handler
                     target_py = os.path.abspath(__file__)
                     new_py = target_py + ".new"
-                    urllib.request.urlretrieve(dl_url, new_py)
+                    urllib.request.urlretrieve(target_url, new_py)
 
                     os.replace(new_py, target_py)
                     print("[UPDATER] ✅ Macro updated successfully! Relaunching...")
