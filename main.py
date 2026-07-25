@@ -21,7 +21,7 @@ from utils.vision import Vision
 from utils.actions import Actions
 from utils.webhook import DiscordWebhook
 
-CURRENT_VERSION = "1.01"
+CURRENT_VERSION = "1.03"
 # Your GitHub Repository Raw Version URL
 UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/version.json"
 
