@@ -396,7 +396,7 @@ class CorpsuleApp(ctk.CTk):
         def start_update():
             win.destroy()
             target_url = exe_url if getattr(sys, 'frozen', False) else dl_url
-            print(f"[UPDATER] 🚀 Downloading update v{latest_v} from {target_url}...")
+            print(f"[UPDATER] 🚀 Downloading update v{latest_v}...")
             self.perform_auto_update(target_url)
 
         ctk.CTkButton(win, text="🚀 Update Now", fg_color="#10B981", hover_color="#059669", command=start_update).pack(pady=15)
@@ -409,11 +409,18 @@ class CorpsuleApp(ctk.CTk):
                     # Executable update handler
                     target_exe = sys.executable
                     new_exe = target_exe + ".new"
+                    
                     urllib.request.urlretrieve(target_url, new_exe)
 
                     bat_path = os.path.join(app_dir, "update.bat")
                     with open(bat_path, "w") as f:
-                        f.write(f'@echo off\ntimeout /t 2 /nobreak > nul\nmove /y "{new_exe}" "{target_exe}"\nstart "" "{target_exe}"\ndel "%~f0"\n')
+                        f.write(
+                            '@echo off\n'
+                            'timeout /t 4 /nobreak > nul\n'  # 4s delay guarantees PyInstaller DLL temp locks release completely!
+                            f'move /y "{new_exe}" "{target_exe}"\n'
+                            f'start "" "{target_exe}"\n'
+                            'del "%~f0"\n'
+                        )
 
                     subprocess.Popen([bat_path], shell=True)
                     self.after(0, self.quit_app)
