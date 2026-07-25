@@ -28,9 +28,9 @@ UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/mai
 # =========================================================================
 # KEYAUTH CONFIGURATION (Fill in your KeyAuth Application details here!)
 # =========================================================================
-KEYAUTH_NAME = "Corpsule Macro"      # Your KeyAuth Application Name
-KEYAUTH_OWNER_ID = "YOUR_OWNER_ID"  # Your KeyAuth Owner ID
-KEYAUTH_SECRET = "YOUR_SECRET"      # Your KeyAuth Secret
+KEYAUTH_NAME = "Orb747z's Application"      # Your KeyAuth Application Name
+KEYAUTH_OWNER_ID = "eJpgeCWCZn"  # Your KeyAuth Owner ID
+KEYAUTH_SECRET = "50afa791346022a1424870eba744aa176c50cff2b3f85a06e5e951efe445bcb2"      # Your KeyAuth Secret
 KEYAUTH_VERSION = "1.0"
 
 ctk.set_appearance_mode("Dark")
@@ -465,7 +465,7 @@ class CorpsuleApp(ctk.CTk):
 
         btn_discord = ctk.CTkButton(
             btn_bar, text="💬 Discord", fg_color="#5865F2", hover_color="#4752C4",
-            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg")
+            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg/yffXf6rNcc")
         )
         btn_discord.pack(side="right", padx=2)
 
@@ -524,20 +524,30 @@ class CorpsuleApp(ctk.CTk):
                         f.write(f'@echo off\ntimeout /t 2 /nobreak > nul\nmove /y "{new_exe}" "{target_exe}"\nstart "" "{target_exe}"\ndel "%~f0"\n')
 
                     subprocess.Popen([bat_path], shell=True)
-                    os._exit(0) # Immediately close old executable!
+                    self.after(0, self.quit_app)
                 else:
                     target_py = os.path.abspath(__file__)
                     new_py = target_py + ".new"
                     urllib.request.urlretrieve(dl_url, new_py)
 
                     os.replace(new_py, target_py)
-                    print("[UPDATER] ✅ Macro updated successfully! Restarting script...")
+                    print("[UPDATER] ✅ Macro updated successfully! Relaunching...")
+                    
                     subprocess.Popen([sys.executable, target_py])
-                    os._exit(0) # Immediately close old python GUI instance!
+                    self.after(0, self.quit_app)
             except Exception as e:
                 print(f"[UPDATER ERROR] Could not complete update: {e}")
 
         threading.Thread(target=_async_download, daemon=True).start()
+
+    def quit_app(self):
+        """Clean main-thread shutdown to instantly close old instance!"""
+        try:
+            keyboard.unhook_all_hotkeys()
+        except Exception:
+            pass
+        self.destroy()
+        os._exit(0)
 
     def import_config_file(self):
         file_path = filedialog.askopenfilename(
