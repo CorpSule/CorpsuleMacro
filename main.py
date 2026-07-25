@@ -28,9 +28,9 @@ UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/mai
 # =========================================================================
 # KEYAUTH CONFIGURATION (Fill in your KeyAuth Application details here!)
 # =========================================================================
-KEYAUTH_NAME = "Orb747z's Application"      # Your KeyAuth Application Name
-KEYAUTH_OWNER_ID = "eJpgeCWCZn"  # Your KeyAuth Owner ID
-KEYAUTH_SECRET = "50afa791346022a1424870eba744aa176c50cff2b3f85a06e5e951efe445bcb2"      # Your KeyAuth Secret
+KEYAUTH_NAME = "Corpsule Macro"      # Your KeyAuth Application Name
+KEYAUTH_OWNER_ID = "YOUR_OWNER_ID"  # Your KeyAuth Owner ID
+KEYAUTH_SECRET = "YOUR_SECRET"      # Your KeyAuth Secret
 KEYAUTH_VERSION = "1.0"
 
 ctk.set_appearance_mode("Dark")
@@ -105,14 +105,9 @@ THEMES = {
 class KeyAuthWrapper:
     @staticmethod
     def verify_key(key):
-        """
-        Validates the key against KeyAuth API.
-        Returns (success: bool, message: str)
-        """
         if not key or len(key.strip()) < 4:
             return False, "Please enter a valid key!"
 
-        # Demo mode bypass if credentials are left as placeholders
         if KEYAUTH_OWNER_ID == "YOUR_OWNER_ID":
             return True, "Demo Mode Active (Fill in KeyAuth credentials in main.py)"
 
@@ -154,7 +149,6 @@ class KeyAuthLoginWindow(ctk.CTk):
         self.key_entry = ctk.CTkEntry(card, width=280, placeholder_text="XXXXX-XXXXX-XXXXX-XXXXX", show="*")
         self.key_entry.pack(pady=5)
 
-        # Pre-fill saved key if available
         saved_key = self.load_saved_key()
         if saved_key:
             self.key_entry.insert(0, saved_key)
@@ -471,16 +465,14 @@ class CorpsuleApp(ctk.CTk):
 
         btn_discord = ctk.CTkButton(
             btn_bar, text="💬 Discord", fg_color="#5865F2", hover_color="#4752C4",
-            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg/yffXf6rNcc")
+            font=ctk.CTkFont(size=11, weight="bold"), width=110, height=32, command=lambda: webbrowser.open("https://discord.gg")
         )
         btn_discord.pack(side="right", padx=2)
 
     def check_for_updates(self):
-        """Asynchronously checks for new updates online with GitHub cache-bypassing!"""
         def _async_update_check():
             print(f"\n[UPDATER] 🔍 Checking for updates... (Current Version: v{CURRENT_VERSION})")
             try:
-                # Appends timestamp to force GitHub to bypass raw CDN cache instantly!
                 cache_bypass_url = f"{UPDATE_CHECK_URL}?t={int(time.time())}"
                 req = urllib.request.Request(
                     cache_bypass_url, 
@@ -532,7 +524,7 @@ class CorpsuleApp(ctk.CTk):
                         f.write(f'@echo off\ntimeout /t 2 /nobreak > nul\nmove /y "{new_exe}" "{target_exe}"\nstart "" "{target_exe}"\ndel "%~f0"\n')
 
                     subprocess.Popen([bat_path], shell=True)
-                    sys.exit(0)
+                    os._exit(0) # Immediately close old executable!
                 else:
                     target_py = os.path.abspath(__file__)
                     new_py = target_py + ".new"
@@ -540,7 +532,8 @@ class CorpsuleApp(ctk.CTk):
 
                     os.replace(new_py, target_py)
                     print("[UPDATER] ✅ Macro updated successfully! Restarting script...")
-                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                    subprocess.Popen([sys.executable, target_py])
+                    os._exit(0) # Immediately close old python GUI instance!
             except Exception as e:
                 print(f"[UPDATER ERROR] Could not complete update: {e}")
 
@@ -1033,6 +1026,5 @@ def start_application():
 
 
 if __name__ == "__main__":
-    # Launch KeyAuth License verification first
     auth_win = KeyAuthLoginWindow(on_success_callback=start_application)
     auth_win.mainloop()
