@@ -1,5 +1,5 @@
 {
-    "version": "1.04",
+    "version": "1.05",
     "download_url": "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/main.py",
     "exe_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.05/CorpsuleMacro.exe",
     "changelog": "- 64-bit Executable Auto-Update Fix\n- Keyless Public Release System"
