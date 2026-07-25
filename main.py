@@ -11,6 +11,8 @@ import cv2
 import webbrowser
 import stat
 import urllib.request
+import urllib.parse
+import hashlib
 import subprocess
 from tkinter import filedialog
 from PIL import Image
@@ -20,8 +22,16 @@ from utils.actions import Actions
 from utils.webhook import DiscordWebhook
 
 CURRENT_VERSION = "1.01"
-# Remote update server / GitHub raw version config URL
-UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/refs/heads/main/version.json"
+# Your GitHub Repository Raw Version URL
+UPDATE_CHECK_URL = "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/version.json"
+
+# =========================================================================
+# KEYAUTH CONFIGURATION (Fill in your KeyAuth Application details here!)
+# =========================================================================
+KEYAUTH_NAME = "Corpsule Macro"      # Your KeyAuth Application Name
+KEYAUTH_OWNER_ID = "YOUR_OWNER_ID"  # Your KeyAuth Owner ID
+KEYAUTH_SECRET = "YOUR_SECRET"      # Your KeyAuth Secret
+KEYAUTH_VERSION = "1.0"
 
 ctk.set_appearance_mode("Dark")
 
@@ -88,6 +98,114 @@ THEMES = {
     "Ocean Cyan": {"bg": "#040F1A", "card": "#0B1D33", "accent": "#06B6D4", "hover": "#0891B2", "text": "#CFFAFE", "border": "#164E63"},
     "Crimson Velvet": {"bg": "#140407", "card": "#260A12", "accent": "#F43F5E", "hover": "#E11D48", "text": "#FECDD3", "border": "#881337"}
 }
+
+# =========================================================================
+# KEYAUTH AUTHENTICATION WRAPPER
+# =========================================================================
+class KeyAuthWrapper:
+    @staticmethod
+    def verify_key(key):
+        """
+        Validates the key against KeyAuth API.
+        Returns (success: bool, message: str)
+        """
+        if not key or len(key.strip()) < 4:
+            return False, "Please enter a valid key!"
+
+        # Demo mode bypass if credentials are left as placeholders
+        if KEYAUTH_OWNER_ID == "YOUR_OWNER_ID":
+            return True, "Demo Mode Active (Fill in KeyAuth credentials in main.py)"
+
+        try:
+            url = f"https://keyauth.win/api/1.2/?type=license&key={key.strip()}&name={urllib.parse.quote(KEYAUTH_NAME)}&ownerid={KEYAUTH_OWNER_ID}&secret={KEYAUTH_SECRET}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'KeyAuth'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if data.get("success", False):
+                    return True, "License Validated!"
+                else:
+                    return False, data.get("message", "Invalid or Expired Key!")
+        except Exception as e:
+            return False, f"KeyAuth Server Error: {e}"
+
+
+class KeyAuthLoginWindow(ctk.CTk):
+    def __init__(self, on_success_callback):
+        super().__init__()
+        self.on_success_callback = on_success_callback
+
+        self.title("🔐 Corpsule Macro — License Verification")
+        self.geometry("380x260")
+        self.resizable(False, False)
+        self.configure(fg_color="#03140D")
+
+        if os.path.exists(resource_path("icon.ico")):
+            try:
+                self.iconbitmap(resource_path("icon.ico"))
+            except Exception:
+                pass
+
+        card = ctk.CTkFrame(self, fg_color="#0A261B", border_color="#065F46", border_width=2)
+        card.pack(padx=15, pady=15, fill="both", expand=True)
+
+        ctk.CTkLabel(card, text="🔑 License Key Required", font=ctk.CTkFont(size=16, weight="bold"), text_color="#A7F3D0").pack(pady=(15, 5))
+        ctk.CTkLabel(card, text="Please enter your KeyAuth license key to continue:", font=ctk.CTkFont(size=11), text_color="gray").pack(pady=(0, 10))
+
+        self.key_entry = ctk.CTkEntry(card, width=280, placeholder_text="XXXXX-XXXXX-XXXXX-XXXXX", show="*")
+        self.key_entry.pack(pady=5)
+
+        # Pre-fill saved key if available
+        saved_key = self.load_saved_key()
+        if saved_key:
+            self.key_entry.insert(0, saved_key)
+
+        self.lbl_status = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color="#EF4444")
+        self.lbl_status.pack(pady=2)
+
+        btn_login = ctk.CTkButton(card, text="🔓 Authenticate Key", fg_color="#10B981", hover_color="#059669", font=ctk.CTkFont(weight="bold"), width=200, command=self.attempt_login)
+        btn_login.pack(pady=10)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def load_saved_key(self):
+        cfg_path = get_safe_config_path()
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path, "r") as f:
+                    return json.load(f).get("license_key", "")
+            except Exception:
+                pass
+        return ""
+
+    def save_license_key(self, key):
+        cfg_path = get_safe_config_path()
+        try:
+            data = {}
+            if os.path.exists(cfg_path):
+                with open(cfg_path, "r") as f:
+                    data = json.load(f)
+            data["license_key"] = key
+            with open(cfg_path, "w") as f:
+                json.dump(data, f, indent=4)
+        except Exception:
+            pass
+
+    def attempt_login(self):
+        entered_key = self.key_entry.get().strip()
+        self.lbl_status.configure(text="⏳ Verifying Key...", text_color="#3B82F6")
+        self.update_idletasks()
+
+        success, msg = KeyAuthWrapper.verify_key(entered_key)
+        if success:
+            self.save_license_key(entered_key)
+            self.destroy()
+            self.on_success_callback()
+        else:
+            self.lbl_status.configure(text=f"❌ {msg}", text_color="#EF4444")
+
+    def on_close(self):
+        sys.exit(0)
+
 
 class PrintRedirector:
     def __init__(self, text_widget):
@@ -358,7 +476,6 @@ class CorpsuleApp(ctk.CTk):
         btn_discord.pack(side="right", padx=2)
 
     def check_for_updates(self):
-        """Asynchronously checks for new updates online."""
         def _async_update_check():
             print(f"\n[UPDATER] 🔍 Checking for updates... (Current Version: v{CURRENT_VERSION})")
             try:
@@ -400,7 +517,6 @@ class CorpsuleApp(ctk.CTk):
             try:
                 app_dir = get_app_dir()
                 if getattr(sys, 'frozen', False):
-                    # Operating as Executable (.exe)
                     target_exe = sys.executable
                     new_exe = target_exe + ".new"
                     urllib.request.urlretrieve(dl_url, new_exe)
@@ -412,7 +528,6 @@ class CorpsuleApp(ctk.CTk):
                     subprocess.Popen([bat_path], shell=True)
                     sys.exit(0)
                 else:
-                    # Operating as Python script (main.py)
                     target_py = os.path.abspath(__file__)
                     new_py = target_py + ".new"
                     urllib.request.urlretrieve(dl_url, new_py)
@@ -906,6 +1021,12 @@ class PlacementConfigWindow(ctk.CTkToplevel):
         self.destroy()
 
 
-if __name__ == "__main__":
+def start_application():
     app = CorpsuleApp()
     app.mainloop()
+
+
+if __name__ == "__main__":
+    # Launch KeyAuth License verification first
+    auth_win = KeyAuthLoginWindow(on_success_callback=start_application)
+    auth_win.mainloop()
