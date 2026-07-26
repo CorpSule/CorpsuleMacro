@@ -1,6 +1,6 @@
 {
-    "version": "1.11",
+    "version": "1.06",
     "download_url": "https://raw.githubusercontent.com/CorpSule/CorpsuleMacro/main/main.py",
-    "exe_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.11/CorpsuleMacro_v1.11.exe.exe",
+    "exe_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.06/CorpsuleMacro_v1.06.exe",
     "changelog": "- Seamless Executable Auto-Updater Fix!"
 }
