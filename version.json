@@ -1,5 +1,5 @@
 {
-    "version": "1.27",
-    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.27/CorpsuleMacro.exe",
-    "changelog": "- Added teams, Challange= Team #1, Regular modes= Team #2, you can disable team select in select mode if u want."
+    "version": "1.28",
+    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.28/CorpsuleMacro.exe",
+    "changelog": "- Fixed Auto challange."
 }
