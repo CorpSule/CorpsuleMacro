@@ -1,5 +1,5 @@
 {
-    "version": "1.39",
-    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.39/CorpsuleMacro.exe",
-    "changelog": "- Added Tower Mode Traits/Traitless, Added Pre-Placements."
+    "version": "1.40",
+    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.40/CorpsuleMacro.exe",
+    "changelog": "- Added Auto Fueling (gold + geode, enable it in mode) Added Boss bounty (Enable it in mode) Ui polishied."
 }
