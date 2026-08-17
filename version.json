@@ -1,5 +1,5 @@
 {
-    "version": "1.42",
-    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.42/CorpsuleMacro.exe",
+    "version": "1.43",
+    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.43/CorpsuleMacro.exe",
     "changelog": "- Added Auto Fueling (gold + geode, enable it in mode) Added Boss bounty (Enable it in mode) Ui polishied."
 }
