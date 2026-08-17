@@ -1,5 +1,5 @@
 {
-    "version": "1.42",
-    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.42/CorpsuleMacro.exe",
-    "changelog": "- Added Auto Fueling (gold + geode, enable it in mode) Added Boss bounty (Enable it in mode) Ui polishied."
+    "version": "1.41",
+    "download_url": "https://github.com/CorpSule/CorpsuleMacro/releases/download/v1.41/CorpsuleMacro.exe",
+    "changelog": "- Added 1 more step to properly finish doing encounter in expeditions."
 }
